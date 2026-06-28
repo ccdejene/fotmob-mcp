@@ -1,1 +1,1 @@
-Move x-mas guidance into configuration docs and de-emphasize it in the intro
+Fix fotmob MCP startup by configuring PYTHONPATH and removing package initializer side effect
