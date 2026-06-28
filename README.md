@@ -49,6 +49,41 @@ If you do not install the package, you must register it with `PYTHONPATH` pointe
 codex mcp add fotmob --env PYTHONPATH=/absolute/path/to/fotmob-mcp -- /absolute/path/to/fotmob-mcp/.venv/bin/python -m fotmob_mcp.server
 ```
 
+## Register in Hermes Agent
+
+Hermes Agent can use this server as a normal MCP server. If Hermes launches MCP servers over stdio, add an entry like this to its MCP config:
+
+```json
+{
+  "mcpServers": {
+    "fotmob": {
+      "command": "/absolute/path/to/fotmob-mcp/.venv/bin/fotmob-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+If your Hermes setup expects an HTTP MCP endpoint instead of stdio, run the server with streamable HTTP:
+
+```bash
+/absolute/path/to/fotmob-mcp/.venv/bin/fotmob-mcp --transport streamable-http --host 127.0.0.1 --port 8000
+```
+
+Then register this URL in Hermes:
+
+```text
+http://127.0.0.1:8000/mcp
+```
+
+The same options can be set with environment variables:
+
+- `FOTMOB_MCP_TRANSPORT`: `stdio`, `sse`, or `streamable-http`
+- `FOTMOB_MCP_HOST`: HTTP bind host
+- `FOTMOB_MCP_PORT`: HTTP bind port
+- `FOTMOB_MCP_SSE_PATH`: SSE endpoint path
+- `FOTMOB_MCP_STREAMABLE_HTTP_PATH`: streamable HTTP endpoint path
+
 ## Configuration
 
 Optional environment variables:

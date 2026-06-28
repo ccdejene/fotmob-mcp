@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -349,8 +350,45 @@ def live_fixtures_tool(league_id: str, season: str, ccode3: str = "INT") -> dict
     return get_live_fixtures(league_id, season, ccode3=ccode3)
 
 
+def _configure_server(host: str | None = None, port: int | None = None, sse_path: str | None = None, streamable_http_path: str | None = None) -> None:
+    if host:
+        mcp.settings.host = host
+    if port is not None:
+        mcp.settings.port = port
+    if sse_path:
+        mcp.settings.sse_path = sse_path
+    if streamable_http_path:
+        mcp.settings.streamable_http_path = streamable_http_path
+
+
 def main() -> None:
-    mcp.run("stdio")
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run the FotMob MCP server.")
+    parser.add_argument(
+        "--transport",
+        choices=("stdio", "sse", "streamable-http"),
+        default=os.getenv("FOTMOB_MCP_TRANSPORT", "stdio"),
+        help="MCP transport to use. Defaults to FOTMOB_MCP_TRANSPORT or stdio.",
+    )
+    parser.add_argument("--host", default=os.getenv("FOTMOB_MCP_HOST"), help="HTTP host for sse or streamable-http transports.")
+    parser.add_argument("--port", type=int, default=int(os.getenv("FOTMOB_MCP_PORT", "8000")), help="HTTP port for sse or streamable-http transports.")
+    parser.add_argument("--mount-path", default=os.getenv("FOTMOB_MCP_MOUNT_PATH"), help="Optional mount path for SSE transport.")
+    parser.add_argument("--sse-path", default=os.getenv("FOTMOB_MCP_SSE_PATH"), help="SSE endpoint path. Defaults to FastMCP's /sse.")
+    parser.add_argument(
+        "--streamable-http-path",
+        default=os.getenv("FOTMOB_MCP_STREAMABLE_HTTP_PATH"),
+        help="Streamable HTTP endpoint path. Defaults to FastMCP's /mcp.",
+    )
+    args = parser.parse_args()
+
+    _configure_server(
+        host=args.host,
+        port=args.port,
+        sse_path=args.sse_path,
+        streamable_http_path=args.streamable_http_path,
+    )
+    mcp.run(args.transport, mount_path=args.mount_path)
 
 
 if __name__ == "__main__":

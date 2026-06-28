@@ -138,6 +138,31 @@ Register in Codex:
 codex mcp add fotmob -- ./.venv/bin/python -m fotmob_mcp.server
 ```
 
+Register in Hermes Agent over stdio:
+
+```json
+{
+  "mcpServers": {
+    "fotmob": {
+      "command": "/absolute/path/to/fotmob-mcp/.venv/bin/fotmob-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+For Hermes setups that use HTTP MCP, start the server with streamable HTTP:
+
+```bash
+fotmob-mcp --transport streamable-http --host 127.0.0.1 --port 8000
+```
+
+Then point Hermes at:
+
+```text
+http://127.0.0.1:8000/mcp
+```
+
 Resources:
 
 - `fotmob://reference`

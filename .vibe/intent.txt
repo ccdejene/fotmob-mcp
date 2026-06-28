@@ -1,1 +1,1 @@
-Fix live fixtures helper to follow nested FotMob poll link
+Add Hermes Agent MCP transport support and registration docs
