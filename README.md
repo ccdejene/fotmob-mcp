@@ -16,7 +16,7 @@ It provides:
 
 - a route catalog
 - a reusable prompt template
-- a small set of tools for listing routes, fetching routes, and search suggestions
+- a small set of tools for listing routes, fetching routes, search suggestions, live fixtures, and top-stats lookups
 
 ## Install
 
@@ -75,6 +75,8 @@ To obtain a fresh value, open FotMob in your browser, trigger a request to one o
 - `list_fotmob_routes`
 - `fetch_fotmob_route`
 - `search_fotmob`
+- `get_live_fixtures`
+- `get_league_top_stats`
 
 ## What this MCP does
 

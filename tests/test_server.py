@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import MagicMock, patch
 
-from fotmob_mcp.server import fetch_fotmob_route, get_league_top_stats, get_route_catalog, list_fotmob_routes, render_prompt_template
+from fotmob_mcp.server import fetch_fotmob_route, get_league_top_stats, get_live_fixtures, get_route_catalog, list_fotmob_routes, render_prompt_template
 
 
 class FotMobMcpTests(unittest.TestCase):
@@ -89,6 +89,39 @@ class FotMobMcpTests(unittest.TestCase):
         result = get_league_top_stats("77", "2026", "goals", "players", 1, client=client)
         self.assertEqual(result["resolvedSeason"], "24254")
         self.assertEqual(result["statsData"], [{"name": "Lionel Messi", "statValue": {"value": 6}}])
+        self.assertEqual(client.get_json.call_count, 2)
+
+    def test_get_live_fixtures_returns_pending_before_poll(self) -> None:
+        client = MagicMock()
+        client.get_json.return_value = {
+            "playoff": {
+                "liveFixtureApiLink": {
+                    "url": "https://pub.fotmob.com/prod/db/api/fixture/live?leagueId=77",
+                    "pollFromUtc": "2099-06-28T18:55:00Z",
+                }
+            }
+        }
+        result = get_live_fixtures("77", "2026", client=client)
+        self.assertEqual(result["status"], "pending")
+        self.assertEqual(result["payload"], [])
+        self.assertEqual(client.get_json.call_count, 1)
+
+    def test_get_live_fixtures_fetches_poll_payload_after_start(self) -> None:
+        client = MagicMock()
+        client.get_json.side_effect = [
+            {
+                "playoff": {
+                    "liveFixtureApiLink": {
+                        "url": "https://pub.fotmob.com/prod/db/api/fixture/live?leagueId=77",
+                        "pollFromUtc": "2000-06-28T18:55:00Z",
+                    }
+                }
+            },
+            {"fixtures": [{"id": 1}]},
+        ]
+        result = get_live_fixtures("77", "2026", client=client)
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["payload"], {"fixtures": [{"id": 1}]})
         self.assertEqual(client.get_json.call_count, 2)
 
     def test_list_routes_filters_keyword(self) -> None:

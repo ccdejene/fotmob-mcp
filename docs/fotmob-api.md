@@ -111,6 +111,8 @@ The `get_league_top_stats` tool wraps this by retrying with the internal season 
 
 For heatmaps, fetch `matchDetails` first and pass the returned `heatmapUrl` query value into `match_heatmaps`.
 
+For live fixtures, use `get_live_fixtures`. It reads the league payload's `liveFixtureApiLink`, waits until `pollFromUtc` when present, and returns an empty payload with status metadata if FotMob has not opened the poll yet.
+
 ## Configuration
 
 Optional environment variables:

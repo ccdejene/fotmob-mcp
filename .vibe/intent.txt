@@ -1,1 +1,1 @@
-Add verified FotMob heatmap transfer and top-stats routes
+Fix live fixtures helper to follow nested FotMob poll link

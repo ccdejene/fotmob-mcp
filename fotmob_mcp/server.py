@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -198,6 +199,88 @@ def get_league_top_stats(
     }
 
 
+def _parse_utc_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _find_live_fixture_link(payload: Any) -> dict[str, Any] | None:
+    if isinstance(payload, dict):
+        if isinstance(payload.get("liveFixtureApiLink"), dict):
+            return payload["liveFixtureApiLink"]
+        for value in payload.values():
+            match = _find_live_fixture_link(value)
+            if match is not None:
+                return match
+    elif isinstance(payload, list):
+        for value in payload:
+            match = _find_live_fixture_link(value)
+            if match is not None:
+                return match
+    return None
+
+
+def get_live_fixtures(
+    league_id: str | int,
+    season: str | int,
+    ccode3: str = "INT",
+    client: FotMobClient | None = None,
+) -> dict[str, Any]:
+    client = client or FotMobClient()
+    league = fetch_fotmob_route("leagues", {"id": league_id, "season": season, "ccode3": ccode3}, client)
+    payload = league["payload"] if isinstance(league["payload"], dict) else {}
+    live_link = _find_live_fixture_link(payload)
+    if not isinstance(live_link, dict) or not live_link.get("url"):
+        return {
+            "route": "live_fixtures",
+            "status": "missing_link",
+            "leagueId": str(league_id),
+            "season": str(season),
+            "league": league,
+            "liveFixtureApiLink": live_link,
+            "payload": [],
+        }
+
+    poll_from = _parse_utc_datetime(live_link.get("pollFromUtc"))
+    if poll_from is not None and datetime.now(timezone.utc) < poll_from:
+        return {
+            "route": "live_fixtures",
+            "status": "pending",
+            "leagueId": str(league_id),
+            "season": str(season),
+            "league": league,
+            "liveFixtureApiLink": live_link,
+            "payload": [],
+        }
+
+    try:
+        live_payload = client.get_json(live_link["url"], {})
+    except FotMobUnavailable:
+        return {
+            "route": "live_fixtures",
+            "status": "unavailable",
+            "leagueId": str(league_id),
+            "season": str(season),
+            "league": league,
+            "liveFixtureApiLink": live_link,
+            "payload": [],
+        }
+
+    return {
+        "route": "live_fixtures",
+        "status": "ok",
+        "leagueId": str(league_id),
+        "season": str(season),
+        "league": league,
+        "liveFixtureApiLink": live_link,
+        "payload": live_payload,
+    }
+
+
 def search_suggestions(term: str, hits: int = 10, lang: str = "en") -> dict[str, Any]:
     return fetch_fotmob_route("search_suggest", {"term": term, "hits": hits, "lang": lang})
 
@@ -259,6 +342,11 @@ def league_top_stats_tool(
     team_id: str | None = None,
 ) -> dict[str, Any]:
     return get_league_top_stats(league_id, season, stat, stat_type, limit, team_id)
+
+
+@mcp.tool(name="get_live_fixtures", description="Fetch live league fixtures from the league payload's live fixture poll link.")
+def live_fixtures_tool(league_id: str, season: str, ccode3: str = "INT") -> dict[str, Any]:
+    return get_live_fixtures(league_id, season, ccode3=ccode3)
 
 
 def main() -> None:
