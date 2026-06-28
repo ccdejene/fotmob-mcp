@@ -1,0 +1,1 @@
+Move x-mas guidance into configuration docs and de-emphasize it in the intro
