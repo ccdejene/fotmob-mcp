@@ -40,6 +40,14 @@ ROUTES: list[FotMobRoute] = [
     FotMobRoute("player_data", "/api/data/playerData", "Player profile, stats, market value data", ("id", "includeMarketValues")),
     FotMobRoute("player_matches", "/api/data/playerMatches", "Paginated player match history", ("playerId", "before", "parentLeagueId")),
     FotMobRoute("match_details", "/api/data/matchDetails", "Match details page", ("matchId",)),
+    FotMobRoute(
+        "match_heatmaps",
+        "/api/data/heatmap/match/{matchId}/heatmaps",
+        "Match player heatmap SVG data",
+        ("matchId", "heatmapUrl"),
+        notes="Use heatmapUrl from matchDetails.content.matchFacts.heatmapUrl",
+    ),
+    FotMobRoute("transfers", "/api/data/transfers", "Transfer center data", ("teamId", "leagueId", "page", "sortBy", "showLoans")),
     FotMobRoute("tvlistings", "/api/data/tvlistings", "TV listings", ("countryCode", "ids")),
     FotMobRoute("audio_matches", "/api/data/audio-matches", "Audio/commentary listings", ()),
     FotMobRoute("dataproviders", "/api/data/dataproviders", "Betting/provider metadata", ()),
@@ -100,6 +108,8 @@ Available routes:
 - /api/data/playerData?id={playerId}&includeMarketValues=true
 - /api/data/playerMatches?playerId={playerId}&before={unix}&parentLeagueId={leagueId}
 - /api/data/matchDetails?matchId={matchId}
+- /api/data/heatmap/match/{matchId}/heatmaps?heatmapUrl={heatmapUrl}
+- /api/data/transfers?teamId={teamId}&leagueId={leagueId}
 - /api/data/tvlistings?countryCode={ccode3}&ids={ids}
 - /api/data/audio-matches
 - /api/data/dataproviders
@@ -112,6 +122,8 @@ Use league_season_deep_stats for league player/team stat tables; pass the intern
 Use teams for team pages.
 Use playerData and playerMatches for player pages.
 Use matchDetails for match pages.
+Use match_heatmaps with the heatmapUrl value from matchDetails.
+Use transfers for transfer center data.
 
 If you need more routes, inspect FotMob's own frontend bundles and confirm the exact path and params before coding.
 """
@@ -132,13 +144,58 @@ def fetch_fotmob_route(route_key: str, params: dict[str, Any] | None = None, cli
     route = _resolve_route(route_key)
     query = _coerce_params(params or {})
     client = client or FotMobClient()
+    path = route.path
+    if route.key == "match_heatmaps":
+        match_id = query.pop("matchId", "")
+        if not match_id:
+            raise ValueError("match_heatmaps requires matchId")
+        path = route.path.format(matchId=match_id)
     if route.key == "leagues_shotmap":
         query.setdefault("shotmap", "true")
     if route.key == "search_suggest":
         query.setdefault("hits", "10")
         query.setdefault("lang", "en")
-    payload = client.get_json(route.path, query)
-    return {"route": route.key, "path": route.path, "params": query, "payload": payload}
+    payload = client.get_json(path, query)
+    return {"route": route.key, "path": path, "params": query, "payload": payload}
+
+
+def get_league_top_stats(
+    league_id: str | int,
+    season: str | int,
+    stat: str = "goals",
+    stat_type: str = "players",
+    limit: int = 10,
+    team_id: str | int | None = None,
+    client: FotMobClient | None = None,
+) -> dict[str, Any]:
+    client = client or FotMobClient()
+    params: dict[str, Any] = {"id": league_id, "season": season, "type": stat_type, "stat": stat}
+    if team_id is not None:
+        params["teamId"] = team_id
+
+    first = fetch_fotmob_route("league_season_deep_stats", params, client)
+    payload = first["payload"]
+    rows = payload.get("statsData", []) if isinstance(payload, dict) else []
+
+    resolved_season = str(season)
+    if not rows and isinstance(payload, dict):
+        for season_info in payload.get("seasons", []):
+            if str(season_info.get("name")) == str(season):
+                resolved_season = str(season_info["id"])
+                params["season"] = resolved_season
+                first = fetch_fotmob_route("league_season_deep_stats", params, client)
+                payload = first["payload"]
+                rows = payload.get("statsData", []) if isinstance(payload, dict) else []
+                break
+
+    return {
+        "route": "league_top_stats",
+        "source_route": first["route"],
+        "path": first["path"],
+        "params": first["params"],
+        "resolvedSeason": resolved_season,
+        "statsData": rows[: max(limit, 0)],
+    }
 
 
 def search_suggestions(term: str, hits: int = 10, lang: str = "en") -> dict[str, Any]:
@@ -190,6 +247,18 @@ def fetch_route_tool(route_key: str, params_json: str = "{}") -> dict[str, Any]:
 @mcp.tool(name="search_fotmob", description="Fetch FotMob search suggestions for a term.")
 def search_fotmob(term: str, hits: int = 10, lang: str = "en") -> dict[str, Any]:
     return search_suggestions(term=term, hits=hits, lang=lang)
+
+
+@mcp.tool(name="get_league_top_stats", description="Fetch top league player/team stats and resolve FotMob internal season ids automatically.")
+def league_top_stats_tool(
+    league_id: str,
+    season: str,
+    stat: str = "goals",
+    stat_type: str = "players",
+    limit: int = 10,
+    team_id: str | None = None,
+) -> dict[str, Any]:
+    return get_league_top_stats(league_id, season, stat, stat_type, limit, team_id)
 
 
 def main() -> None:

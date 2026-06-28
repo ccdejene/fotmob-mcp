@@ -101,6 +101,8 @@ The server currently exposes these verified FotMob routes:
 - `/api/data/playerData`
 - `/api/data/playerMatches`
 - `/api/data/matchDetails`
+- `/api/data/heatmap/match/{matchId}/heatmaps`
+- `/api/data/transfers`
 - `/api/data/tvlistings`
 - `/api/data/audio-matches`
 - `/api/data/dataproviders`

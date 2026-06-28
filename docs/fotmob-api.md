@@ -25,6 +25,8 @@ All requests should go through the shared FotMob client.
 | `/api/data/playerData` | Player profile, stats, market value data | `id`, `includeMarketValues` |
 | `/api/data/playerMatches` | Paginated player match history | `playerId`, `before`, `parentLeagueId` |
 | `/api/data/matchDetails` | Match details page | `matchId` |
+| `/api/data/heatmap/match/{matchId}/heatmaps` | Match player heatmap SVG data | `matchId`, `heatmapUrl` |
+| `/api/data/transfers` | Transfer center data | `teamId`, `leagueId`, `page`, `sortBy`, `showLoans` |
 | `/api/data/tvlistings` | TV listings | `countryCode`, `ids` |
 | `/api/data/audio-matches` | Audio/commentary listings | no query parameters observed |
 | `/api/data/dataproviders` | Betting/provider metadata | no query parameters observed |
@@ -48,10 +50,12 @@ All requests should go through the shared FotMob client.
 - `/api/data/teams`
 - `/api/data/playerData`
 - `/api/data/playerMatches`
+- `/api/data/transfers`
 
 ### Match detail
 
 - `/api/data/matchDetails`
+- `/api/data/heatmap/match/{matchId}/heatmaps`
 - `/api/data/audio-matches`
 - `/api/data/dataproviders`
 
@@ -65,6 +69,8 @@ GET https://www.fotmob.com/api/data/teams?id=8593&ccode3=NED
 GET https://www.fotmob.com/api/data/playerData?id=12345&includeMarketValues=true
 GET https://www.fotmob.com/api/data/playerMatches?playerId=12345&before=1719532800&parentLeagueId=57
 GET https://www.fotmob.com/api/data/matchDetails?matchId=4653849
+GET https://www.fotmob.com/api/data/heatmap/match/4667787/heatmaps?heatmapUrl=https%3A%2F%2Fpub.fotmob.com%2Fprod%2Fdb%2Fapi%2Fheatmap%2Fmatch%2F4667787
+GET https://www.fotmob.com/api/data/transfers?teamId=8593
 ```
 
 ## Search Payload Shape
@@ -100,6 +106,10 @@ Typical flow:
 4. cache and reuse the response when the same request is made again
 
 For league stat tables, fetch `/api/data/leagues` first and use the internal season id from its `seasons` list. For example, World Cup 2026 uses `season=24254` for `/api/data/leagueseasondeepstats`, while the overview route can use `season=2026`.
+
+The `get_league_top_stats` tool wraps this by retrying with the internal season id when FotMob returns an empty stat table with a `seasons` mapping.
+
+For heatmaps, fetch `matchDetails` first and pass the returned `heatmapUrl` query value into `match_heatmaps`.
 
 ## Configuration
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import MagicMock, patch
 
-from fotmob_mcp.server import fetch_fotmob_route, get_route_catalog, list_fotmob_routes, render_prompt_template
+from fotmob_mcp.server import fetch_fotmob_route, get_league_top_stats, get_route_catalog, list_fotmob_routes, render_prompt_template
 
 
 class FotMobMcpTests(unittest.TestCase):
@@ -13,12 +13,16 @@ class FotMobMcpTests(unittest.TestCase):
         self.assertIn("search_suggest", keys)
         self.assertIn("match_details", keys)
         self.assertIn("league_season_deep_stats", keys)
+        self.assertIn("match_heatmaps", keys)
+        self.assertIn("transfers", keys)
 
     def test_prompt_mentions_search_suggest(self) -> None:
         prompt = render_prompt_template()
         self.assertIn("/api/data/search/suggest", prompt)
         self.assertIn("/api/data/leagues", prompt)
         self.assertIn("/api/data/leagueseasondeepstats", prompt)
+        self.assertIn("/api/data/heatmap/match/{matchId}/heatmaps", prompt)
+        self.assertIn("/api/data/transfers", prompt)
 
     def test_fetch_route_uses_client(self) -> None:
         client = MagicMock()
@@ -61,6 +65,31 @@ class FotMobMcpTests(unittest.TestCase):
             "/api/data/leagueseasondeepstats",
             {"id": "77", "season": "24254", "type": "players", "stat": "goals"},
         )
+
+    def test_fetch_route_supports_match_heatmaps(self) -> None:
+        client = MagicMock()
+        client.get_json.return_value = {"players": {}}
+        with patch("fotmob_mcp.server.FotMobClient", return_value=client):
+            payload = fetch_fotmob_route(
+                "match_heatmaps",
+                {"matchId": "4667787", "heatmapUrl": "https://pub.fotmob.com/prod/db/api/heatmap/match/4667787"},
+            )
+        self.assertEqual(payload["path"], "/api/data/heatmap/match/4667787/heatmaps")
+        client.get_json.assert_called_once_with(
+            "/api/data/heatmap/match/4667787/heatmaps",
+            {"heatmapUrl": "https://pub.fotmob.com/prod/db/api/heatmap/match/4667787"},
+        )
+
+    def test_get_league_top_stats_resolves_internal_season_id(self) -> None:
+        client = MagicMock()
+        client.get_json.side_effect = [
+            {"statsData": [], "seasons": [{"id": 24254, "name": "2026"}]},
+            {"statsData": [{"name": "Lionel Messi", "statValue": {"value": 6}}]},
+        ]
+        result = get_league_top_stats("77", "2026", "goals", "players", 1, client=client)
+        self.assertEqual(result["resolvedSeason"], "24254")
+        self.assertEqual(result["statsData"], [{"name": "Lionel Messi", "statValue": {"value": 6}}])
+        self.assertEqual(client.get_json.call_count, 2)
 
     def test_list_routes_filters_keyword(self) -> None:
         result = list_fotmob_routes("match")

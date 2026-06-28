@@ -6,7 +6,7 @@ import os
 import time
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 import requests
 
@@ -45,11 +45,14 @@ class FotMobClient:
         if cached is not None:
             return cached
 
-        url = f"{self.base_url}{path}?{urlencode(params)}"
+        url = self._build_url(path, params)
         try:
             response = requests.get(url, headers=self.headers, timeout=20)
             response.raise_for_status()
-            payload = response.json()
+            if not response.content:
+                payload = {}
+            else:
+                payload = response.json()
         except Exception as exc:
             raise FotMobUnavailable("FotMob data could not be fetched.") from exc
 
@@ -58,6 +61,11 @@ class FotMobClient:
 
         cache_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         return payload
+
+    def _build_url(self, path: str, params: dict[str, str]) -> str:
+        query = urlencode(params)
+        base = path if urlsplit(path).scheme in {"http", "https"} else f"{self.base_url}{path}"
+        return f"{base}?{query}" if query else base
 
     def _cache_path(self, path: str, params: dict[str, str]) -> Path:
         key = hashlib.sha256(f"{path}?{urlencode(sorted(params.items()))}".encode("utf-8")).hexdigest()

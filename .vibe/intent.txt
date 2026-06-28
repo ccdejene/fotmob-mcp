@@ -1,1 +1,1 @@
-Add FotMob league season deep stats MCP route
+Add verified FotMob heatmap transfer and top-stats routes
