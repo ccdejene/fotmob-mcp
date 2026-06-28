@@ -1,1 +1,1 @@
-Clear consumed vibetrace intent after MCP startup fix
+Document production fotmob MCP install and register installed executable

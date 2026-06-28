@@ -20,22 +20,39 @@ It provides:
 
 ## Install
 
+From a source checkout:
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
+
+This installs both the runtime dependencies and the local `fotmob-mcp` package. Installing the package matters because MCP clients can start the server from any working directory.
 
 ## Run
 
 ```bash
-python -m fotmob_mcp.server
+fotmob-mcp
 ```
 
 ## Register in Codex
 
 ```bash
-codex mcp add fotmob -- ./.venv/bin/python -m fotmob_mcp.server
+codex mcp add fotmob -- /absolute/path/to/fotmob-mcp/.venv/bin/fotmob-mcp
+```
+
+For this checkout, that command would be:
+
+```bash
+codex mcp add fotmob -- /Users/ccdejene/Documents/codex_projects/fotmob-mcp/.venv/bin/fotmob-mcp
+```
+
+If you do not install the package, you must register it with `PYTHONPATH` pointed at the checkout:
+
+```bash
+codex mcp add fotmob --env PYTHONPATH=/absolute/path/to/fotmob-mcp -- /absolute/path/to/fotmob-mcp/.venv/bin/python -m fotmob_mcp.server
 ```
 
 ## Configuration
