@@ -1,4 +1,4 @@
-![FotMob MCP banner](assets/fotmob-mcp-banner.svg)
+![FotMob MCP banner](assets/fotmob-mcp-banner.png)
 
 # FotMob MCP
 
