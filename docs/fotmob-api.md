@@ -20,6 +20,7 @@ All requests should go through the shared FotMob client.
 | `/api/data/allLeagues` | Global league directory | `locale`, `country` |
 | `/api/data/matches` | Daily match listings | `date`, `timezone`, `ccode3` |
 | `/api/data/leagues` | League overview, table, fixtures, stats, playoff data | `id`, `season`, `ccode3` |
+| `/api/data/leagueseasondeepstats` | League season player and team stat tables | `id`, `season`, `type`, `stat`, `teamId` |
 | `/api/data/teams` | Team overview, fixtures, stats, transfers, history | `id`, `ccode3` |
 | `/api/data/playerData` | Player profile, stats, market value data | `id`, `includeMarketValues` |
 | `/api/data/playerMatches` | Paginated player match history | `playerId`, `before`, `parentLeagueId` |
@@ -39,6 +40,7 @@ All requests should go through the shared FotMob client.
 
 - `/api/data/matches`
 - `/api/data/leagues`
+- `/api/data/leagueseasondeepstats`
 - `/api/data/tvlistings`
 
 ### Teams and players
@@ -58,6 +60,7 @@ All requests should go through the shared FotMob client.
 ```text
 GET https://www.fotmob.com/api/data/search/suggest?hits=50&lang=en%2Cfr%2Cnl&term=neth
 GET https://www.fotmob.com/api/data/leagues?id=57&ccode3=NED&season=2026/2027
+GET https://www.fotmob.com/api/data/leagueseasondeepstats?id=77&season=24254&type=players&stat=goals
 GET https://www.fotmob.com/api/data/teams?id=8593&ccode3=NED
 GET https://www.fotmob.com/api/data/playerData?id=12345&includeMarketValues=true
 GET https://www.fotmob.com/api/data/playerMatches?playerId=12345&before=1719532800&parentLeagueId=57
@@ -95,6 +98,8 @@ Typical flow:
 2. fetch the relevant team, league, or match route
 3. inspect match details for lineups, scorers, and event data
 4. cache and reuse the response when the same request is made again
+
+For league stat tables, fetch `/api/data/leagues` first and use the internal season id from its `seasons` list. For example, World Cup 2026 uses `season=24254` for `/api/data/leagueseasondeepstats`, while the overview route can use `season=2026`.
 
 ## Configuration
 

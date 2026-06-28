@@ -1,1 +1,1 @@
-Remove local absolute path from fotmob MCP README
+Add FotMob league season deep stats MCP route

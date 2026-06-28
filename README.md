@@ -96,6 +96,7 @@ The server currently exposes these verified FotMob routes:
 - `/api/data/allLeagues`
 - `/api/data/matches`
 - `/api/data/leagues`
+- `/api/data/leagueseasondeepstats`
 - `/api/data/teams`
 - `/api/data/playerData`
 - `/api/data/playerMatches`

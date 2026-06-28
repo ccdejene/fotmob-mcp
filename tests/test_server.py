@@ -12,11 +12,13 @@ class FotMobMcpTests(unittest.TestCase):
         keys = {route["key"] for route in routes}
         self.assertIn("search_suggest", keys)
         self.assertIn("match_details", keys)
+        self.assertIn("league_season_deep_stats", keys)
 
     def test_prompt_mentions_search_suggest(self) -> None:
         prompt = render_prompt_template()
         self.assertIn("/api/data/search/suggest", prompt)
         self.assertIn("/api/data/leagues", prompt)
+        self.assertIn("/api/data/leagueseasondeepstats", prompt)
 
     def test_fetch_route_uses_client(self) -> None:
         client = MagicMock()
@@ -45,6 +47,20 @@ class FotMobMcpTests(unittest.TestCase):
         client.get_json.assert_called_once()
         _, params = client.get_json.call_args.args
         self.assertEqual(params["shotmap"], "true")
+
+    def test_fetch_route_supports_league_season_deep_stats(self) -> None:
+        client = MagicMock()
+        client.get_json.return_value = {"statsData": []}
+        with patch("fotmob_mcp.server.FotMobClient", return_value=client):
+            payload = fetch_fotmob_route(
+                "league_season_deep_stats",
+                {"id": "77", "season": "24254", "type": "players", "stat": "goals"},
+            )
+        self.assertEqual(payload["path"], "/api/data/leagueseasondeepstats")
+        client.get_json.assert_called_once_with(
+            "/api/data/leagueseasondeepstats",
+            {"id": "77", "season": "24254", "type": "players", "stat": "goals"},
+        )
 
     def test_list_routes_filters_keyword(self) -> None:
         result = list_fotmob_routes("match")

@@ -29,6 +29,13 @@ ROUTES: list[FotMobRoute] = [
     FotMobRoute("matches", "/api/data/matches", "Daily match listings", ("date", "timezone", "ccode3")),
     FotMobRoute("leagues", "/api/data/leagues", "League overview, table, fixtures, stats, playoff data", ("id", "season", "ccode3")),
     FotMobRoute("leagues_shotmap", "/api/data/leagues", "League overview with shotmap data", ("id", "season", "ccode3", "shotmap"), notes="Set shotmap=true"),
+    FotMobRoute(
+        "league_season_deep_stats",
+        "/api/data/leagueseasondeepstats",
+        "League season player and team stat tables",
+        ("id", "season", "type", "stat", "teamId"),
+        notes="Use the internal season id from the leagues route, e.g. World Cup 2026 season=24254",
+    ),
     FotMobRoute("teams", "/api/data/teams", "Team overview, fixtures, stats, transfers, history", ("id", "ccode3")),
     FotMobRoute("player_data", "/api/data/playerData", "Player profile, stats, market value data", ("id", "includeMarketValues")),
     FotMobRoute("player_matches", "/api/data/playerMatches", "Paginated player match history", ("playerId", "before", "parentLeagueId")),
@@ -88,6 +95,7 @@ Available routes:
 - /api/data/matches?date={yyyy-mm-dd}&timezone={tz}&ccode3={ccode3}
 - /api/data/leagues?id={leagueId}&season={season}&ccode3={ccode3}
 - /api/data/leagues?id={leagueId}&season={season}&ccode3={ccode3}&shotmap=true
+- /api/data/leagueseasondeepstats?id={leagueId}&season={seasonId}&type={players|teams}&stat={statName}
 - /api/data/teams?id={teamId}&ccode3={ccode3}
 - /api/data/playerData?id={playerId}&includeMarketValues=true
 - /api/data/playerMatches?playerId={playerId}&before={unix}&parentLeagueId={leagueId}
@@ -100,6 +108,7 @@ Use search/suggest for autocomplete and lookup.
 Use allLeagues for league discovery.
 Use matches for date-based match lists.
 Use leagues for league pages and playoff data.
+Use league_season_deep_stats for league player/team stat tables; pass the internal season id exposed by leagues.seasons.
 Use teams for team pages.
 Use playerData and playerMatches for player pages.
 Use matchDetails for match pages.
