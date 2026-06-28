@@ -117,12 +117,9 @@ For live fixtures, use `get_live_fixtures`. It reads the league payload's `liveF
 
 Optional environment variables:
 
-- `FOTMOB_X_MAS`: send the FotMob request header used by some browser sessions
 - `FOTMOB_BASE_URL`: override the default FotMob base URL
 - `FOTMOB_CACHE_DIR`: change the local cache directory
 - `FOTMOB_CACHE_TTL_SECONDS`: change the cache lifetime
-
-If you need to collect a fresh `x-mas` value, open FotMob in a browser, trigger a request to a JSON endpoint, inspect the request in DevTools Network, and copy the `x-mas` request header into `FOTMOB_X_MAS`.
 
 ## MCP Server
 

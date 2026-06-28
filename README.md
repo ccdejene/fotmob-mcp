@@ -102,16 +102,9 @@ The same options can be set with environment variables:
 
 Optional environment variables:
 
-- `FOTMOB_X_MAS`: set this only if you want to send the FotMob request header used by some browser sessions
 - `FOTMOB_BASE_URL`: override the default FotMob base URL
 - `FOTMOB_CACHE_DIR`: change the local cache directory
 - `FOTMOB_CACHE_TTL_SECONDS`: change the cache lifetime
-
-## Optional x-mas header
-
-Most verified routes work without this header. If you want to send it anyway, set `FOTMOB_X_MAS` before starting the server.
-
-To obtain a fresh value, open FotMob in your browser, trigger a request to one of the JSON endpoints, and inspect the request headers in DevTools Network. Copy the `x-mas` header value from that request into `FOTMOB_X_MAS`.
 
 ## Resources
 
@@ -137,7 +130,7 @@ The server exposes:
 - a reusable prompt describing the supported routes
 - MCP tools for listing routes, fetching a route, and searching FotMob suggestions
 
-The client caches responses locally and only sends the header when you configure it.
+The client caches responses locally to reduce repeated FotMob requests.
 
 ## Supported Endpoints
 

@@ -97,7 +97,7 @@ def render_route_catalog_markdown() -> str:
 def render_prompt_template() -> str:
     return """You are working with FotMob public JSON routes.
 
-Use the shared FotMob client. The x-mas header is optional and only added when configured.
+Use the shared FotMob client.
 
 Available routes:
 - /api/data/search/suggest?term={q}&hits={n}&lang={langs}
