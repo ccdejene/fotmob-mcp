@@ -2,7 +2,7 @@
 
 # FotMob MCP
 
-Standalone Model Context Protocol server for verified FotMob JSON routes.
+Model Context Protocol server for live FotMob football data.
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)
 ![MCP ready](https://img.shields.io/badge/MCP-ready-16A34A?style=flat-square)
