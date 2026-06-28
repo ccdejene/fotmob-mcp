@@ -1,1 +1,1 @@
-Remove optional x-mas header guidance from public docs
+Redesign README with banner and clearer onboarding
