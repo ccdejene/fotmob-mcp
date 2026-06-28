@@ -1,1 +1,1 @@
-Replace path placeholders with production MCP entrypoint docs
+Clarify production setup verification for Hermes MCP docs

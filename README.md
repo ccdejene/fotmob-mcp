@@ -20,7 +20,7 @@ It provides:
 
 ## Install
 
-From a source checkout:
+From the repository root:
 
 ```bash
 python3 -m venv .venv
@@ -29,7 +29,14 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-This installs both the runtime dependencies and the local `fotmob-mcp` package. Installing the package matters because MCP clients can start the server from any working directory.
+`requirements.txt` installs both the runtime dependencies and the local `fotmob-mcp` package in editable mode. Installing the package matters because MCP clients can start the server from any working directory as long as `fotmob-mcp` is on the agent process `PATH`.
+
+Verify the install:
+
+```bash
+command -v fotmob-mcp
+fotmob-mcp --help
+```
 
 ## Run
 
@@ -63,6 +70,12 @@ Hermes Agent can use this server as a normal MCP server. Install the package in 
     }
   }
 }
+```
+
+Before starting Hermes, verify that the same runtime environment can resolve the command:
+
+```bash
+command -v fotmob-mcp
 ```
 
 If your Hermes setup expects an HTTP MCP endpoint instead of stdio, run the server with streamable HTTP:

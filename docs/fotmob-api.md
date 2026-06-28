@@ -126,6 +126,13 @@ If you need to collect a fresh `x-mas` value, open FotMob in a browser, trigger 
 
 ## MCP Server
 
+After installation, verify that the server command is available on the agent process `PATH`:
+
+```bash
+command -v fotmob-mcp
+fotmob-mcp --help
+```
+
 Run locally:
 
 ```bash
