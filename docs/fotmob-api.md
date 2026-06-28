@@ -144,7 +144,7 @@ Register in Hermes Agent over stdio:
 {
   "mcpServers": {
     "fotmob": {
-      "command": "/absolute/path/to/fotmob-mcp/.venv/bin/fotmob-mcp",
+      "command": "fotmob-mcp",
       "args": []
     }
   }

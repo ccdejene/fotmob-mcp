@@ -1,1 +1,1 @@
-Add Hermes Agent MCP transport support and registration docs
+Replace path placeholders with production MCP entrypoint docs
