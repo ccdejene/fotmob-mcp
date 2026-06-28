@@ -43,12 +43,6 @@ fotmob-mcp
 codex mcp add fotmob -- /absolute/path/to/fotmob-mcp/.venv/bin/fotmob-mcp
 ```
 
-For this checkout, that command would be:
-
-```bash
-codex mcp add fotmob -- /Users/ccdejene/Documents/codex_projects/fotmob-mcp/.venv/bin/fotmob-mcp
-```
-
 If you do not install the package, you must register it with `PYTHONPATH` pointed at the checkout:
 
 ```bash

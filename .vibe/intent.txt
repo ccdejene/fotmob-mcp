@@ -1,1 +1,1 @@
-Document production fotmob MCP install and register installed executable
+Remove local absolute path from fotmob MCP README
