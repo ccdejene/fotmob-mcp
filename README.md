@@ -1,25 +1,14 @@
-<p align="center">
-  <img src="assets/fotmob-mcp-banner.svg" alt="FotMob MCP banner" width="100%">
-</p>
+![FotMob MCP banner](assets/fotmob-mcp-banner.svg)
 
-<h1 align="center">FotMob MCP</h1>
+# FotMob MCP
 
-<p align="center">
-  <strong>Live football data for AI agents, powered by verified FotMob JSON routes.</strong>
-</p>
+**Live football data for AI agents, powered by verified FotMob JSON routes.**
 
-<p align="center">
-  <a href="#quick-start">Quick Start</a> |
-  <a href="#integrations">Integrations</a> |
-  <a href="#tools">Tools</a> |
-  <a href="#supported-routes">Routes</a>
-</p>
+[Quick Start](#quick-start) | [Integrations](#integrations) | [Tools](#tools) | [Routes](#supported-routes)
 
-<p align="center">
-  <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white">
-  <img alt="MCP" src="https://img.shields.io/badge/MCP-ready-16A34A?style=flat-square">
-  <img alt="Transport" src="https://img.shields.io/badge/transports-stdio%20%7C%20SSE%20%7C%20HTTP-0F766E?style=flat-square">
-</p>
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)
+![MCP ready](https://img.shields.io/badge/MCP-ready-16A34A?style=flat-square)
+![Transports](https://img.shields.io/badge/transports-stdio%20%7C%20SSE%20%7C%20HTTP-0F766E?style=flat-square)
 
 FotMob MCP is a standalone [Model Context Protocol](https://modelcontextprotocol.io/) server for football research, fixture lookup, team and player pages, match details, live fixture polling, and league statistics.
 

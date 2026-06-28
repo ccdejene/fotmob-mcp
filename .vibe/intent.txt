@@ -1,1 +1,0 @@
-Redesign README with banner and clearer onboarding
