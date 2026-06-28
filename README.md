@@ -2,27 +2,25 @@
 
 # FotMob MCP
 
-**Live football data for AI agents, powered by verified FotMob JSON routes.**
-
-[Quick Start](#quick-start) | [Integrations](#integrations) | [Tools](#tools) | [Routes](#supported-routes)
+Standalone Model Context Protocol server for verified FotMob JSON routes.
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)
 ![MCP ready](https://img.shields.io/badge/MCP-ready-16A34A?style=flat-square)
 ![Transports](https://img.shields.io/badge/transports-stdio%20%7C%20SSE%20%7C%20HTTP-0F766E?style=flat-square)
 
-FotMob MCP is a standalone [Model Context Protocol](https://modelcontextprotocol.io/) server for football research, fixture lookup, team and player pages, match details, live fixture polling, and league statistics.
+FotMob MCP exposes a small set of MCP tools and resources for working with football data from FotMob. It is intended for agents and local tooling that need fixture lookup, league pages, team/player data, match details, live fixture polling, and league stats.
 
-It gives Codex, Hermes Agent, and other MCP-compatible clients a small, predictable interface over useful FotMob data without making agents scrape pages by hand.
+## Features
 
-## Why Use It
+- Verified FotMob route catalog
+- Search suggestions for teams, players, leagues, and matches
+- Direct fetch tool for supported FotMob JSON routes
+- Helpers for live fixtures and league top stats
+- MCP resources for route reference and reusable prompt context
+- Local response cache
+- `stdio`, `sse`, and `streamable-http` transports
 
-- **Live football context**: daily matches, league pages, teams, players, transfers, TV listings, and match details.
-- **Agent-friendly tools**: search, route discovery, direct route fetches, live fixtures, and top-stat helpers.
-- **Production-oriented setup**: install once, expose `fotmob-mcp` on `PATH`, and register it with any MCP client.
-- **Multiple transports**: stdio by default, plus SSE and streamable HTTP for hosted or agent-managed runtimes.
-- **Local caching**: repeated FotMob requests are cached to reduce unnecessary network calls.
-
-## Quick Start
+## Installation
 
 From the repository root:
 
@@ -33,22 +31,36 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-`requirements.txt` installs the runtime dependencies and the local `fotmob-mcp` package in editable mode. Installing the package matters because MCP clients can start the server from any working directory as long as `fotmob-mcp` is on the agent process `PATH`.
+`requirements.txt` installs the runtime dependencies and this package in editable mode.
 
-Verify the install:
+Verify that the console script is available:
 
 ```bash
 command -v fotmob-mcp
 fotmob-mcp --help
 ```
 
-Run the server over stdio:
+## Usage
+
+Run the server with the default stdio transport:
 
 ```bash
 fotmob-mcp
 ```
 
-## Integrations
+Run with streamable HTTP:
+
+```bash
+fotmob-mcp --transport streamable-http --host 127.0.0.1 --port 8000
+```
+
+Default streamable HTTP endpoint:
+
+```text
+http://127.0.0.1:8000/mcp
+```
+
+## Client Configuration
 
 ### Codex
 
@@ -56,16 +68,9 @@ fotmob-mcp
 codex mcp add fotmob -- fotmob-mcp
 ```
 
-For development from a source checkout, install it editable first, then use the same registration command:
-
-```bash
-python -m pip install -e .
-codex mcp add fotmob -- fotmob-mcp
-```
-
 ### Hermes Agent
 
-Install the package in the runtime environment used by Hermes, then register the package entry point:
+Install the package in the runtime environment used by Hermes, then add the MCP server entry:
 
 ```json
 {
@@ -78,72 +83,31 @@ Install the package in the runtime environment used by Hermes, then register the
 }
 ```
 
-Before starting Hermes, verify that the same runtime environment can resolve the command:
+Verify that Hermes can resolve the command from the same environment:
 
 ```bash
 command -v fotmob-mcp
 ```
 
-### Streamable HTTP
-
-If your agent expects an HTTP MCP endpoint instead of stdio, start the server with streamable HTTP:
-
-```bash
-fotmob-mcp --transport streamable-http --host 127.0.0.1 --port 8000
-```
-
-Then register:
-
-```text
-http://127.0.0.1:8000/mcp
-```
-
-Transport options can also be set with environment variables:
-
-- `FOTMOB_MCP_TRANSPORT`: `stdio`, `sse`, or `streamable-http`
-- `FOTMOB_MCP_HOST`: HTTP bind host
-- `FOTMOB_MCP_PORT`: HTTP bind port
-- `FOTMOB_MCP_SSE_PATH`: SSE endpoint path
-- `FOTMOB_MCP_STREAMABLE_HTTP_PATH`: streamable HTTP endpoint path
-
-## What You Can Ask
-
-Examples of tasks this MCP is built for:
-
-- "Find today's Premier League fixtures."
-- "Search FotMob for World Cup and fetch the league page."
-- "Show the current top scorers for World Cup 2026."
-- "Get match details, scorers, and lineups for a match id."
-- "Fetch a team's squad, history, fixtures, and stats."
-- "List verified FotMob routes that mention transfers."
-
 ## Tools
 
-| Tool | Purpose |
+| Tool | Description |
 | --- | --- |
-| `list_fotmob_routes` | List the verified route catalog, optionally filtered by keyword. |
-| `fetch_fotmob_route` | Fetch a verified FotMob route by key and JSON parameters. |
-| `search_fotmob` | Search FotMob suggestions for teams, players, leagues, and matches. |
-| `get_live_fixtures` | Fetch live fixtures from a league payload's live poll link. |
-| `get_league_top_stats` | Fetch league player or team stats and resolve internal season ids automatically. |
+| `list_fotmob_routes` | List supported routes, optionally filtered by keyword. |
+| `fetch_fotmob_route` | Fetch a supported route by route key and JSON parameters. |
+| `search_fotmob` | Query FotMob search suggestions. |
+| `get_live_fixtures` | Fetch live fixtures from a league payload's poll link. |
+| `get_league_top_stats` | Fetch league player or team stats and resolve internal season ids when possible. |
 
 ## Resources
 
-- `fotmob://reference`
-- `fotmob://routes`
-- `fotmob://prompt`
-
-## Configuration
-
-Optional environment variables:
-
-- `FOTMOB_BASE_URL`: override the default FotMob base URL
-- `FOTMOB_CACHE_DIR`: change the local cache directory
-- `FOTMOB_CACHE_TTL_SECONDS`: change the cache lifetime
+| Resource | Description |
+| --- | --- |
+| `fotmob://reference` | Markdown reference for the supported FotMob API routes. |
+| `fotmob://routes` | Route catalog generated by the server. |
+| `fotmob://prompt` | Reusable prompt context for agents. |
 
 ## Supported Routes
-
-The server currently exposes these verified FotMob routes:
 
 | Key | Endpoint |
 | --- | --- |
@@ -163,12 +127,29 @@ The server currently exposes these verified FotMob routes:
 | `audio_matches` | `/api/data/audio-matches` |
 | `dataproviders` | `/api/data/dataproviders` |
 
-Use `list_fotmob_routes` to inspect the exact parameters and notes for each route.
+Use `list_fotmob_routes` to inspect parameters and notes for each route.
 
-## Development Check
+## Configuration
+
+Optional environment variables:
+
+| Variable | Description |
+| --- | --- |
+| `FOTMOB_BASE_URL` | Override the default FotMob base URL. |
+| `FOTMOB_CACHE_DIR` | Change the local cache directory. |
+| `FOTMOB_CACHE_TTL_SECONDS` | Change cache lifetime in seconds. |
+| `FOTMOB_MCP_TRANSPORT` | Default transport: `stdio`, `sse`, or `streamable-http`. |
+| `FOTMOB_MCP_HOST` | HTTP bind host. |
+| `FOTMOB_MCP_PORT` | HTTP bind port. |
+| `FOTMOB_MCP_SSE_PATH` | SSE endpoint path. |
+| `FOTMOB_MCP_STREAMABLE_HTTP_PATH` | Streamable HTTP endpoint path. |
+
+## Development
+
+Run tests:
 
 ```bash
 python -m unittest
 ```
 
-For a full installation smoke test, clone the repository into a clean directory, run the Quick Start commands, and verify that `fotmob-mcp --help` works outside the repository directory.
+For a clean install check, clone the repository into a temporary directory, run the installation commands, and verify that `fotmob-mcp --help` works outside the repository directory.
