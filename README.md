@@ -15,9 +15,9 @@ FotMob MCP exposes a small set of MCP tools and resources for working with footb
 - Verified FotMob route catalog
 - Search suggestions for teams, players, leagues, and matches
 - Direct fetch tool for supported FotMob JSON routes
-- Helpers for live fixtures and league top stats
+- Helpers for live match details, live fixtures, and league top stats
 - MCP resources for route reference and reusable prompt context
-- Local response cache
+- Optional local response cache
 - `stdio`, `sse`, and `streamable-http` transports
 
 ## Installation
@@ -94,8 +94,10 @@ command -v fotmob-mcp
 | Tool                   | Description                                                                      |
 | ---------------------- | -------------------------------------------------------------------------------- |
 | `list_fotmob_routes`   | List supported routes, optionally filtered by keyword.                           |
-| `fetch_fotmob_route`   | Fetch a supported route by route key and JSON parameters.                        |
+| `fetch_fotmob_route`   | Fetch a supported route by route key and JSON parameters. Fresh by default.      |
 | `search_fotmob`        | Query FotMob search suggestions.                                                 |
+| `get_match_details`    | Fetch match details from a FotMob match id or URL. Fresh by default.             |
+| `get_match_liveticker` | Fetch match live ticker/commentary events from a match id or URL. Fresh by default. |
 | `get_live_fixtures`    | Fetch live fixtures from a league payload's poll link.                           |
 | `get_league_top_stats` | Fetch league player or team stats and resolve internal season ids when possible. |
 
@@ -121,6 +123,7 @@ command -v fotmob-mcp
 | `player_data`              | `/api/data/playerData`                       |
 | `player_matches`           | `/api/data/playerMatches`                    |
 | `match_details`            | `/api/data/matchDetails`                     |
+| `match_liveticker`         | `/api/data/ltc`                              |
 | `match_heatmaps`           | `/api/data/heatmap/match/{matchId}/heatmaps` |
 | `transfers`                | `/api/data/transfers`                        |
 | `tvlistings`               | `/api/data/tvlistings`                       |
@@ -129,6 +132,22 @@ command -v fotmob-mcp
 
 Use `list_fotmob_routes` to inspect parameters and notes for each route.
 
+For match pages, prefer `get_match_details` when you have a FotMob URL:
+
+```text
+get_match_details("https://www.fotmob.com/en-GB/matches/japan-vs-brazil/1uqadm#4653711")
+```
+
+For match commentary/live ticker events, use the same URL or match id:
+
+```text
+get_match_liveticker("https://www.fotmob.com/en-GB/matches/japan-vs-brazil/1uqadm#4653711")
+```
+
+The match page slug can vary; the helper extracts the match id from the URL fragment. If FotMob has no live ticker file for a match, the tool returns `status: unavailable` with an empty `events` array.
+
+All MCP tools fetch fresh FotMob data by default, including search, league, team, player, match, fixture, heatmap, transfer, TV, audio, and provider routes. `fetch_fotmob_route` and `get_match_details` still expose `use_cache=true` for explicit opt-in caching.
+
 ## Configuration
 
 Optional environment variables:
@@ -136,8 +155,8 @@ Optional environment variables:
 | Variable                          | Description                                              |
 | --------------------------------- | -------------------------------------------------------- |
 | `FOTMOB_BASE_URL`                 | Override the default FotMob base URL.                    |
-| `FOTMOB_CACHE_DIR`                | Change the local cache directory.                        |
-| `FOTMOB_CACHE_TTL_SECONDS`        | Change cache lifetime in seconds.                        |
+| `FOTMOB_CACHE_DIR`                | Change the local cache directory for explicit cache use. |
+| `FOTMOB_CACHE_TTL_SECONDS`        | Change cache lifetime in seconds for explicit cache use. |
 | `FOTMOB_MCP_TRANSPORT`            | Default transport: `stdio`, `sse`, or `streamable-http`. |
 | `FOTMOB_MCP_HOST`                 | HTTP bind host.                                          |
 | `FOTMOB_MCP_PORT`                 | HTTP bind port.                                          |

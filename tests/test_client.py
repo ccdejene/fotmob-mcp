@@ -47,6 +47,37 @@ class FotMobClientTests(unittest.TestCase):
             url = mock_get.call_args.args[0]
             self.assertEqual(url, "https://pub.fotmob.com/prod/db/api/fixture/live?leagueId=77")
 
+    def test_get_json_appends_params_to_absolute_url_with_query(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            client = FotMobClient(cache_dir=tmpdir, cache_ttl_seconds=60)
+            response = MagicMock()
+            response.content = b'{"ok": true}'
+            response.raise_for_status.return_value = None
+            response.json.return_value = {"ok": True}
+
+            with patch("fotmob_mcp.client.requests.get", return_value=response) as mock_get:
+                payload = client.get_json("https://pub.fotmob.com/prod/db/api/fixture/live?leagueId=77", {"lang": "en"})
+
+            self.assertEqual(payload, {"ok": True})
+            url = mock_get.call_args.args[0]
+            self.assertEqual(url, "https://pub.fotmob.com/prod/db/api/fixture/live?leagueId=77&lang=en")
+
+    def test_get_json_can_bypass_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            client = FotMobClient(cache_dir=tmpdir, cache_ttl_seconds=60)
+            response = MagicMock()
+            response.content = b'{"ok": true}'
+            response.raise_for_status.return_value = None
+            response.json.return_value = {"ok": True}
+
+            with patch("fotmob_mcp.client.requests.get", return_value=response) as mock_get:
+                payload = client.get_json("/api/data/matchDetails", {"matchId": "4653711"}, use_cache=False)
+
+            self.assertEqual(payload, {"ok": True})
+            mock_get.assert_called_once()
+            cache_files = list(Path(tmpdir).glob("*.json"))
+            self.assertEqual(cache_files, [])
+
 
 if __name__ == "__main__":
     unittest.main()

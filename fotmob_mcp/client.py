@@ -39,11 +39,19 @@ class FotMobClient:
             headers["x-mas"] = self.x_mas
         return headers
 
-    def get_json(self, path: str, params: dict[str, str]) -> Any:
+    def get_json(
+        self,
+        path: str,
+        params: dict[str, str],
+        *,
+        use_cache: bool = True,
+        cache_ttl_seconds: int | None = None,
+    ) -> Any:
         cache_path = self._cache_path(path, params)
-        cached = self._read_cache(cache_path)
-        if cached is not None:
-            return cached
+        if use_cache:
+            cached = self._read_cache(cache_path, cache_ttl_seconds=cache_ttl_seconds)
+            if cached is not None:
+                return cached
 
         url = self._build_url(path, params)
         try:
@@ -59,23 +67,26 @@ class FotMobClient:
         if payload in (None, ""):
             raise FotMobUnavailable("FotMob data could not be fetched.")
 
-        cache_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        if use_cache:
+            cache_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         return payload
 
     def _build_url(self, path: str, params: dict[str, str]) -> str:
         query = urlencode(params)
         base = path if urlsplit(path).scheme in {"http", "https"} else f"{self.base_url}{path}"
-        return f"{base}?{query}" if query else base
+        separator = "&" if urlsplit(base).query else "?"
+        return f"{base}{separator}{query}" if query else base
 
     def _cache_path(self, path: str, params: dict[str, str]) -> Path:
         key = hashlib.sha256(f"{path}?{urlencode(sorted(params.items()))}".encode("utf-8")).hexdigest()
         return self.cache_dir / f"{key}.json"
 
-    def _read_cache(self, cache_path: Path) -> Any | None:
+    def _read_cache(self, cache_path: Path, *, cache_ttl_seconds: int | None = None) -> Any | None:
         if not cache_path.exists():
             return None
         age = time.time() - cache_path.stat().st_mtime
-        if age > self.cache_ttl_seconds:
+        ttl = self.cache_ttl_seconds if cache_ttl_seconds is None else cache_ttl_seconds
+        if age > ttl:
             return None
         try:
             payload = json.loads(cache_path.read_text(encoding="utf-8"))

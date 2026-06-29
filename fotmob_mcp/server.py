@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, urlsplit
 
 from mcp.server.fastmcp import FastMCP
 
-from fotmob_mcp.client import FotMobClient
+from fotmob_mcp.client import FotMobClient, FotMobUnavailable
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -42,6 +44,13 @@ ROUTES: list[FotMobRoute] = [
     FotMobRoute("player_data", "/api/data/playerData", "Player profile, stats, market value data", ("id", "includeMarketValues")),
     FotMobRoute("player_matches", "/api/data/playerMatches", "Paginated player match history", ("playerId", "before", "parentLeagueId")),
     FotMobRoute("match_details", "/api/data/matchDetails", "Match details page", ("matchId",)),
+    FotMobRoute(
+        "match_liveticker",
+        "/api/data/ltc",
+        "Match live ticker/commentary events",
+        ("ltcUrl", "teams"),
+        notes="ltcUrl format: https://data.fotmob.com/webcl/ltc/gsm/{matchId}_{lang}.json.gz; teams is a JSON array string",
+    ),
     FotMobRoute(
         "match_heatmaps",
         "/api/data/heatmap/match/{matchId}/heatmaps",
@@ -97,7 +106,7 @@ def render_route_catalog_markdown() -> str:
 def render_prompt_template() -> str:
     return """You are working with FotMob public JSON routes.
 
-Use the shared FotMob client.
+Use the shared FotMob client. MCP tools fetch fresh data by default and do not use the local cache unless caching is explicitly requested.
 
 Available routes:
 - /api/data/search/suggest?term={q}&hits={n}&lang={langs}
@@ -110,6 +119,7 @@ Available routes:
 - /api/data/playerData?id={playerId}&includeMarketValues=true
 - /api/data/playerMatches?playerId={playerId}&before={unix}&parentLeagueId={leagueId}
 - /api/data/matchDetails?matchId={matchId}
+- /api/data/ltc?ltcUrl={tickerUrl}&teams={jsonTeamNameArray}
 - /api/data/heatmap/match/{matchId}/heatmaps?heatmapUrl={heatmapUrl}
 - /api/data/transfers?teamId={teamId}&leagueId={leagueId}
 - /api/data/tvlistings?countryCode={ccode3}&ids={ids}
@@ -123,7 +133,9 @@ Use leagues for league pages and playoff data.
 Use league_season_deep_stats for league player/team stat tables; pass the internal season id exposed by leagues.seasons.
 Use teams for team pages.
 Use playerData and playerMatches for player pages.
-Use matchDetails for match pages.
+Use get_match_details for match pages when you have either a FotMob URL or match id; it fetches fresh data by default.
+Use get_match_liveticker for match commentary/live ticker events; it derives ltcUrl and teams from matchDetails.
+Use matchDetails through fetch_fotmob_route for low-level route access.
 Use match_heatmaps with the heatmapUrl value from matchDetails.
 Use transfers for transfer center data.
 
@@ -142,7 +154,13 @@ def _resolve_route(route_key: str) -> FotMobRoute:
     return ROUTE_BY_KEY[key]
 
 
-def fetch_fotmob_route(route_key: str, params: dict[str, Any] | None = None, client: FotMobClient | None = None) -> dict[str, Any]:
+def fetch_fotmob_route(
+    route_key: str,
+    params: dict[str, Any] | None = None,
+    client: FotMobClient | None = None,
+    *,
+    use_cache: bool = False,
+) -> dict[str, Any]:
     route = _resolve_route(route_key)
     query = _coerce_params(params or {})
     client = client or FotMobClient()
@@ -157,8 +175,123 @@ def fetch_fotmob_route(route_key: str, params: dict[str, Any] | None = None, cli
     if route.key == "search_suggest":
         query.setdefault("hits", "10")
         query.setdefault("lang", "en")
-    payload = client.get_json(path, query)
-    return {"route": route.key, "path": path, "params": query, "payload": payload}
+    payload = client.get_json(path, query, use_cache=use_cache)
+    return {"route": route.key, "path": path, "params": query, "useCache": use_cache, "payload": payload}
+
+
+def extract_match_id(match_id_or_url: str | int) -> str:
+    value = str(match_id_or_url).strip()
+    if not value:
+        raise ValueError("match_id_or_url is required")
+
+    if value.isdigit():
+        return value
+
+    parsed = urlsplit(value)
+    if parsed.fragment.isdigit():
+        return parsed.fragment
+
+    query_match_id = parse_qs(parsed.query).get("matchId", [""])[0]
+    if query_match_id.isdigit():
+        return query_match_id
+
+    matches = re.findall(r"\d{6,}", value)
+    if matches:
+        return matches[-1]
+
+    raise ValueError(f"Could not extract a FotMob match id from: {match_id_or_url}")
+
+
+def get_match_details(
+    match_id_or_url: str | int,
+    *,
+    use_cache: bool = False,
+    client: FotMobClient | None = None,
+) -> dict[str, Any]:
+    match_id = extract_match_id(match_id_or_url)
+    client = client or FotMobClient()
+    payload = client.get_json(
+        "/api/data/matchDetails",
+        {"matchId": match_id},
+        use_cache=use_cache,
+    )
+    status = payload.get("header", {}).get("status", {}) if isinstance(payload, dict) else {}
+    general = payload.get("general", {}) if isinstance(payload, dict) else {}
+    return {
+        "route": "match_details",
+        "path": "/api/data/matchDetails",
+        "params": {"matchId": match_id},
+        "matchId": match_id,
+        "useCache": use_cache,
+        "started": general.get("started"),
+        "finished": general.get("finished"),
+        "status": status,
+        "payload": payload,
+    }
+
+
+def _derive_liveticker_teams(match_payload: Any) -> list[str]:
+    if not isinstance(match_payload, dict):
+        return []
+
+    content = match_payload.get("content", {})
+    liveticker = content.get("liveticker") if isinstance(content, dict) else None
+    liveticker_teams = liveticker.get("teams") if isinstance(liveticker, dict) else None
+    if isinstance(liveticker_teams, list):
+        teams = [str(team) for team in liveticker_teams if team]
+        if len(teams) >= 2:
+            return teams[:2]
+
+    general = match_payload.get("general", {})
+    fallback_teams = [
+        general.get("homeTeam", {}).get("name") if isinstance(general.get("homeTeam"), dict) else None,
+        general.get("awayTeam", {}).get("name") if isinstance(general.get("awayTeam"), dict) else None,
+    ]
+    return [str(team) for team in fallback_teams if team]
+
+
+def _build_liveticker_url(match_id: str, lang: str) -> str:
+    clean_lang = lang.strip() or "en"
+    return f"https://data.fotmob.com/webcl/ltc/gsm/{match_id}_{clean_lang}.json.gz"
+
+
+def get_match_liveticker(
+    match_id_or_url: str | int,
+    lang: str = "en",
+    *,
+    teams: list[str] | None = None,
+    use_cache: bool = False,
+    client: FotMobClient | None = None,
+) -> dict[str, Any]:
+    match_id = extract_match_id(match_id_or_url)
+    client = client or FotMobClient()
+    resolved_teams = teams
+    if resolved_teams is None:
+        match = get_match_details(match_id, use_cache=use_cache, client=client)
+        resolved_teams = _derive_liveticker_teams(match["payload"])
+
+    if len(resolved_teams) < 2:
+        raise ValueError("get_match_liveticker requires two team names or a matchDetails payload with liveticker teams")
+
+    ltc_url = _build_liveticker_url(match_id, lang)
+    params = {"ltcUrl": ltc_url, "teams": json.dumps(resolved_teams[:2], separators=(",", ":"))}
+    try:
+        payload = client.get_json("/api/data/ltc", params, use_cache=use_cache)
+        status = "ok"
+    except FotMobUnavailable:
+        payload = {"events": [], "hasUrl": False}
+        status = "unavailable"
+    return {
+        "route": "match_liveticker",
+        "status": status,
+        "path": "/api/data/ltc",
+        "params": params,
+        "matchId": match_id,
+        "lang": lang,
+        "teams": resolved_teams[:2],
+        "useCache": use_cache,
+        "payload": payload,
+    }
 
 
 def get_league_top_stats(
@@ -232,7 +365,14 @@ def get_live_fixtures(
     client: FotMobClient | None = None,
 ) -> dict[str, Any]:
     client = client or FotMobClient()
-    league = fetch_fotmob_route("leagues", {"id": league_id, "season": season, "ccode3": ccode3}, client)
+    league_params = {"id": str(league_id), "season": str(season), "ccode3": ccode3}
+    league = {
+        "route": "leagues",
+        "path": "/api/data/leagues",
+        "params": league_params,
+        "useCache": False,
+        "payload": client.get_json("/api/data/leagues", league_params, use_cache=False),
+    }
     payload = league["payload"] if isinstance(league["payload"], dict) else {}
     live_link = _find_live_fixture_link(payload)
     if not isinstance(live_link, dict) or not live_link.get("url"):
@@ -259,7 +399,7 @@ def get_live_fixtures(
         }
 
     try:
-        live_payload = client.get_json(live_link["url"], {})
+        live_payload = client.get_json(live_link["url"], {}, use_cache=False)
     except FotMobUnavailable:
         return {
             "route": "live_fixtures",
@@ -318,19 +458,29 @@ def list_fotmob_routes(query: str | None = None) -> dict[str, Any]:
 
 
 @mcp.tool(name="fetch_fotmob_route", description="Fetch one of the verified FotMob JSON routes through the shared FotMob client.")
-def fetch_route_tool(route_key: str, params_json: str = "{}") -> dict[str, Any]:
+def fetch_route_tool(route_key: str, params_json: str = "{}", use_cache: bool = False) -> dict[str, Any]:
     try:
         params = json.loads(params_json)
     except json.JSONDecodeError as exc:
         raise ValueError(f"params_json must be valid JSON: {exc}") from exc
     if not isinstance(params, dict):
         raise ValueError("params_json must decode to a JSON object")
-    return fetch_fotmob_route(route_key, params)
+    return fetch_fotmob_route(route_key, params, use_cache=use_cache)
 
 
 @mcp.tool(name="search_fotmob", description="Fetch FotMob search suggestions for a term.")
 def search_fotmob(term: str, hits: int = 10, lang: str = "en") -> dict[str, Any]:
     return search_suggestions(term=term, hits=hits, lang=lang)
+
+
+@mcp.tool(name="get_match_details", description="Fetch FotMob match details from a match id or FotMob match URL. Fresh data is fetched by default.")
+def match_details_tool(match_id_or_url: str, use_cache: bool = False) -> dict[str, Any]:
+    return get_match_details(match_id_or_url, use_cache=use_cache)
+
+
+@mcp.tool(name="get_match_liveticker", description="Fetch FotMob live ticker/commentary events from a match id or FotMob match URL. Fresh data is fetched by default.")
+def match_liveticker_tool(match_id_or_url: str, lang: str = "en", use_cache: bool = False) -> dict[str, Any]:
+    return get_match_liveticker(match_id_or_url, lang=lang, use_cache=use_cache)
 
 
 @mcp.tool(name="get_league_top_stats", description="Fetch top league player/team stats and resolve FotMob internal season ids automatically.")
